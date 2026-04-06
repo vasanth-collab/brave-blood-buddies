@@ -11,7 +11,7 @@ import { searchDonors } from '@/lib/dataStore';
 import { BLOOD_GROUPS, type BloodGroup, type DonorProfile } from '@/types';
 
 export default function SearchDonors() {
-  const [bloodGroup, setBloodGroup] = useState<string>('');
+  const [bloodGroup, setBloodGroup] = useState<string>('all');
   const [location, setLocation] = useState('');
   const [availableOnly, setAvailableOnly] = useState(true);
   const [results, setResults] = useState<DonorProfile[]>([]);
