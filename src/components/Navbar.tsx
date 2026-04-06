@@ -1,8 +1,20 @@
+// =============================================
+// NAVBAR - Top navigation bar (desktop + mobile)
+// =============================================
+
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Droplets, Menu, X, LogOut, User, LayoutDashboard, Search, PlusCircle } from 'lucide-react';
 import { useState } from 'react';
+
+// Navigation links (only shown when logged in)
+const NAV_LINKS = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/search', label: 'Find Donors', icon: Search },
+  { to: '/request', label: 'Request Blood', icon: PlusCircle },
+  { to: '/profile', label: 'Profile', icon: User },
+];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -15,28 +27,23 @@ export default function Navbar() {
     setMobileOpen(false);
   };
 
-  const navLinks = user ? [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/search', label: 'Find Donors', icon: Search },
-    { to: '/request', label: 'Request Blood', icon: PlusCircle },
-    { to: '/profile', label: 'Profile', icon: User },
-  ] : [];
+  const links = user ? NAV_LINKS : [];
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        {/* Logo */}
         <Link to="/" className="flex items-center gap-2 font-bold text-xl">
           <Droplets className="h-7 w-7 text-primary" />
           <span className="text-foreground">Blood<span className="text-primary">Link</span></span>
         </Link>
 
-        {/* Desktop nav */}
+        {/* Desktop navigation */}
         <div className="hidden md:flex items-center gap-1">
-          {navLinks.map(l => (
+          {links.map(l => (
             <Link key={l.to} to={l.to}>
               <Button variant="ghost" size="sm" className="gap-2">
-                <l.icon className="h-4 w-4" />
-                {l.label}
+                <l.icon className="h-4 w-4" /> {l.label}
               </Button>
             </Link>
           ))}
@@ -52,20 +59,19 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile toggle */}
+        {/* Mobile menu button */}
         <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile dropdown menu */}
       {mobileOpen && (
         <div className="md:hidden border-t bg-card px-4 pb-4 animate-slide-up">
-          {navLinks.map(l => (
+          {links.map(l => (
             <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)}>
               <Button variant="ghost" className="w-full justify-start gap-2 my-1">
-                <l.icon className="h-4 w-4" />
-                {l.label}
+                <l.icon className="h-4 w-4" /> {l.label}
               </Button>
             </Link>
           ))}

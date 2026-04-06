@@ -1,3 +1,7 @@
+// =============================================
+// APP - Main entry point, sets up routing and providers
+// =============================================
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -13,8 +17,9 @@ import Dashboard from "@/pages/Dashboard";
 import SearchDonors from "@/pages/SearchDonors";
 import RequestBlood from "@/pages/RequestBlood";
 import Profile from "@/pages/Profile";
-import NotFound from "./pages/NotFound.tsx";
+import NotFound from "./pages/NotFound";
 
+// Load demo data on first visit
 seedDemoData();
 
 const queryClient = new QueryClient();
