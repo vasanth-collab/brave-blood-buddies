@@ -1,10 +1,15 @@
+// =============================================
+// DASHBOARD - Shows stats, active requests, and top donors
+// =============================================
+
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Droplets, AlertTriangle, Activity, Star, Clock } from 'lucide-react';
+import { Users, Droplets, AlertTriangle, Activity, Star } from 'lucide-react';
 import { getStats, getRequests } from '@/lib/dataStore';
 import type { BloodRequest, DonorProfile } from '@/types';
 
+// Colors for urgency badges
 const urgencyColors: Record<string, string> = {
   critical: 'bg-critical text-critical-foreground',
   urgent: 'bg-warning text-warning-foreground',
@@ -12,17 +17,24 @@ const urgencyColors: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({ totalDonors: 0, activeDonors: 0, totalRequests: 0, openRequests: 0, criticalRequests: 0, topDonors: [] as DonorProfile[] });
+  const [stats, setStats] = useState({
+    totalDonors: 0, activeDonors: 0, totalRequests: 0,
+    openRequests: 0, criticalRequests: 0, topDonors: [] as DonorProfile[],
+  });
   const [requests, setRequests] = useState<BloodRequest[]>([]);
 
+  // Load data when page opens
   useEffect(() => {
     setStats(getStats());
-    const allReqs = getRequests().filter(r => r.status === 'open');
+    // Get open requests sorted by urgency (critical first)
     const urgencyOrder = { critical: 0, urgent: 1, normal: 2 };
-    allReqs.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
-    setRequests(allReqs);
+    const openReqs = getRequests()
+      .filter(r => r.status === 'open')
+      .sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+    setRequests(openReqs);
   }, []);
 
+  // Cards shown at the top
   const statCards = [
     { label: 'Total Donors', value: stats.totalDonors, icon: Users, color: 'text-primary' },
     { label: 'Active Donors', value: stats.activeDonors, icon: Activity, color: 'text-success' },
@@ -34,7 +46,7 @@ export default function Dashboard() {
     <div className="container mx-auto px-4 py-8 space-y-8 animate-fade-in">
       <h1 className="text-3xl font-bold">Dashboard</h1>
 
-      {/* Stats Grid */}
+      {/* --- STAT CARDS --- */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map(s => (
           <Card key={s.label} className="shadow-card border-0">
@@ -50,7 +62,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Active Requests */}
+        {/* --- ACTIVE REQUESTS --- */}
         <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -77,7 +89,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Top Donors */}
+        {/* --- TOP DONORS --- */}
         <Card className="shadow-card border-0">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">

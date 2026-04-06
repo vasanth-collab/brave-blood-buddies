@@ -1,3 +1,7 @@
+// =============================================
+// REQUEST BLOOD - Form to create a new blood request
+// =============================================
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,19 +13,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Droplets, Send, AlertTriangle, Zap, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { BLOOD_GROUPS, type BloodGroup, type UrgencyLevel, type BloodRequest } from '@/types';
+import { BLOOD_GROUPS, type BloodGroup, type UrgencyLevel } from '@/types';
 import { addRequest } from '@/lib/dataStore';
 
-const urgencyOptions: { value: UrgencyLevel; label: string; desc: string; icon: React.ElementType }[] = [
-  { value: 'normal', label: 'Normal', desc: 'Standard request, no immediate danger', icon: Clock },
-  { value: 'urgent', label: 'Urgent', desc: 'Surgery or treatment within 24 hours', icon: Zap },
-  { value: 'critical', label: 'Critical', desc: 'Life-threatening emergency, immediate need', icon: AlertTriangle },
+// Urgency options with icons and descriptions
+const urgencyOptions = [
+  { value: 'normal' as UrgencyLevel, label: 'Normal', desc: 'No immediate danger', icon: Clock, color: 'text-success', border: 'border-success bg-success/10' },
+  { value: 'urgent' as UrgencyLevel, label: 'Urgent', desc: 'Within 24 hours', icon: Zap, color: 'text-warning', border: 'border-warning bg-warning/10' },
+  { value: 'critical' as UrgencyLevel, label: 'Critical', desc: 'Life-threatening', icon: AlertTriangle, color: 'text-critical', border: 'border-critical bg-critical/10' },
 ];
 
 export default function RequestBlood() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
   const [form, setForm] = useState({
     bloodGroup: '' as BloodGroup,
     location: user?.location || '',
@@ -33,6 +39,7 @@ export default function RequestBlood() {
     notes: '',
   });
 
+  // Shortcut to update any form field
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,7 +48,7 @@ export default function RequestBlood() {
       toast({ title: 'Error', description: 'Please select a blood group.', variant: 'destructive' });
       return;
     }
-    const req: BloodRequest = {
+    addRequest({
       id: crypto.randomUUID(),
       requesterId: user?.id || 'anonymous',
       requesterName: user?.name || 'Anonymous',
@@ -55,8 +62,7 @@ export default function RequestBlood() {
       notes: form.notes,
       status: 'open',
       createdAt: new Date().toISOString(),
-    };
-    addRequest(req);
+    });
     toast({ title: 'Request submitted!', description: 'Your blood request has been posted.' });
     navigate('/dashboard');
   };
@@ -75,7 +81,8 @@ export default function RequestBlood() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Urgency */}
+
+            {/* Urgency picker */}
             <div className="space-y-2">
               <Label>Urgency Level</Label>
               <div className="grid grid-cols-3 gap-3">
@@ -85,16 +92,10 @@ export default function RequestBlood() {
                     type="button"
                     onClick={() => set('urgency', o.value)}
                     className={`p-3 rounded-xl border-2 text-center transition-all ${
-                      form.urgency === o.value
-                        ? o.value === 'critical' ? 'border-critical bg-critical/10'
-                          : o.value === 'urgent' ? 'border-warning bg-warning/10'
-                          : 'border-success bg-success/10'
-                        : 'border-border hover:border-muted-foreground/30'
+                      form.urgency === o.value ? o.border : 'border-border hover:border-muted-foreground/30'
                     }`}
                   >
-                    <o.icon className={`h-5 w-5 mx-auto mb-1 ${
-                      o.value === 'critical' ? 'text-critical' : o.value === 'urgent' ? 'text-warning' : 'text-success'
-                    }`} />
+                    <o.icon className={`h-5 w-5 mx-auto mb-1 ${o.color}`} />
                     <div className="font-medium text-sm">{o.label}</div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">{o.desc}</div>
                   </button>
@@ -102,6 +103,7 @@ export default function RequestBlood() {
               </div>
             </div>
 
+            {/* Form fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Blood Group Needed</Label>

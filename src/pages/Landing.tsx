@@ -1,30 +1,38 @@
+// =============================================
+// LANDING PAGE - The homepage visitors see first
+// =============================================
+
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Droplets, Shield, Zap, Users, Heart, ArrowRight, Star } from 'lucide-react';
 import bloodDrop from '@/assets/blood-drop.png';
 
+// Feature cards data
+const features = [
+  { icon: Star, title: 'Reliability Scoring', desc: 'Donors ranked by donation history, response rate, and activity' },
+  { icon: Zap, title: 'Emergency Priority', desc: 'Critical requests surface first with smart urgency handling' },
+  { icon: Shield, title: 'Verified Donors', desc: 'Phone/email verified donors marked with trust badges' },
+  { icon: Users, title: 'Smart Matching', desc: 'Find the nearest, most reliable, available donor instantly' },
+];
+
+// Stats shown on the homepage
+const stats = [
+  { value: '10K+', label: 'Registered Donors' },
+  { value: '5K+', label: 'Lives Saved' },
+  { value: '98%', label: 'Match Rate' },
+  { value: '<30min', label: 'Avg Response' },
+];
+
 export default function Landing() {
-  const features = [
-    { icon: Star, title: 'Reliability Scoring', desc: 'Donors ranked by donation history, response rate, and activity' },
-    { icon: Zap, title: 'Emergency Priority', desc: 'Critical requests surface first with smart urgency handling' },
-    { icon: Shield, title: 'Verified Donors', desc: 'Phone/email verified donors marked with trust badges' },
-    { icon: Users, title: 'Smart Matching', desc: 'Find the nearest, most reliable, available donor instantly' },
-  ];
-
-  const stats = [
-    { value: '10K+', label: 'Registered Donors' },
-    { value: '5K+', label: 'Lives Saved' },
-    { value: '98%', label: 'Match Rate' },
-    { value: '<30min', label: 'Avg Response' },
-  ];
-
   return (
     <div className="min-h-screen">
-      {/* Hero */}
+
+      {/* --- HERO SECTION --- */}
       <section className="relative overflow-hidden px-4 py-20 md:py-32">
         <div className="absolute inset-0 bg-hero-gradient opacity-5" />
         <div className="container mx-auto flex flex-col-reverse lg:flex-row items-center gap-12 relative">
+          {/* Left: Text */}
           <div className="flex-1 text-center lg:text-left animate-fade-in">
             <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-foreground mb-6">
               <Heart className="h-4 w-4" /> Every Drop Counts
@@ -49,6 +57,7 @@ export default function Landing() {
               </Link>
             </div>
           </div>
+          {/* Right: Image */}
           <div className="flex-1 flex justify-center animate-slide-up">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-150" />
@@ -58,7 +67,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Stats */}
+      {/* --- STATS BAR --- */}
       <section className="border-y bg-card">
         <div className="container mx-auto grid grid-cols-2 md:grid-cols-4 divide-x">
           {stats.map(s => (
@@ -70,7 +79,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features */}
+      {/* --- FEATURES GRID --- */}
       <section className="px-4 py-20">
         <div className="container mx-auto">
           <div className="text-center mb-12">
@@ -95,7 +104,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* --- CALL TO ACTION --- */}
       <section className="px-4 py-20">
         <div className="container mx-auto">
           <Card className="bg-hero-gradient border-0 shadow-elevated overflow-hidden">
@@ -114,7 +123,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* --- FOOTER --- */}
       <footer className="border-t px-4 py-8">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2 font-semibold text-foreground">
