@@ -22,7 +22,7 @@ export default function SearchDonors() {
 
   const handleSearch = () => {
     setResults(searchDonors({
-      bloodGroup: bloodGroup as BloodGroup || undefined,
+      bloodGroup: bloodGroup !== 'all' ? bloodGroup as BloodGroup : undefined,
       location: location || undefined,
       availableOnly,
     }));
