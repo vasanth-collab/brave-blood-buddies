@@ -60,7 +60,6 @@ export default function Assignments() {
     // bump donor stats
     if (!error && authUser) {
       const inc = status === 'accepted' ? 1 : 0;
-      await supabase.rpc('noop'); // placeholder if RPC unavailable — manual update below:
       const { data: dd } = await supabase.from('donor_details').select('*').eq('user_id', authUser.id).maybeSingle();
       if (dd) {
         await supabase.from('donor_details').update({

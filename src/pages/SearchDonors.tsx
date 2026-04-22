@@ -37,17 +37,26 @@ export default function SearchDonors() {
 
   const handleSearch = async () => {
     setLoading(true);
-    let query = supabase
-      .from('profiles')
-      .select('*, donor_details!inner(*)');
-    if (bloodGroup !== 'all') query = query.eq('blood_group', bloodGroup);
-    if (location) {
-      query = query.or(`location.ilike.%${location}%,pincode.ilike.%${location}%`);
-    }
-    const { data, error } = await query;
-    if (error) { setLoading(false); return; }
+    // Two queries — easier to type than the inner join when no FK is auto-detected.
+    const [profilesRes, detailsRes] = await Promise.all([
+      (() => {
+        let q = supabase.from('profiles').select('*');
+        if (bloodGroup !== 'all') q = q.eq('blood_group', bloodGroup as BloodGroup);
+        if (location) q = q.or(`location.ilike.%${location}%,pincode.ilike.%${location}%`);
+        return q;
+      })(),
+      supabase.from('donor_details').select('*'),
+    ]);
+    if (profilesRes.error) { setLoading(false); return; }
 
-    let rows = (data ?? []) as DonorRow[];
+    const detailsMap = new Map<string, DonorDetails>();
+    (detailsRes.data ?? []).forEach(d => detailsMap.set(d.user_id, d as DonorDetails));
+
+    let rows: DonorRow[] = (profilesRes.data ?? []).map(p => ({
+      ...(p as Profile),
+      donor_details: detailsMap.get(p.id) ?? null,
+    })).filter(r => r.donor_details); // only show donors
+
     if (availableOnly) rows = rows.filter(r => r.donor_details?.is_available);
 
     // Compute distance from search location (or user's profile)
