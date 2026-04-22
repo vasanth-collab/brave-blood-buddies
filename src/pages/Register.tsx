@@ -1,3 +1,7 @@
+// =============================================
+// REGISTER PAGE — creates a Supabase auth user + profile
+// =============================================
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,28 +12,32 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Droplets, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { BLOOD_GROUPS, type BloodGroup, type UserRole } from '@/types';
+import { BLOOD_GROUPS, type BloodGroup } from '@/types';
 
 export default function Register() {
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '',
-    bloodGroup: '' as BloodGroup, location: '', pincode: '', role: 'donor' as UserRole,
+    bloodGroup: '' as BloodGroup, location: '', pincode: '',
   });
-  const { register } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.bloodGroup) {
       toast({ title: 'Error', description: 'Please select a blood group.', variant: 'destructive' });
       return;
     }
-    if (register(form)) {
+    setSubmitting(true);
+    const { error } = await signUp(form);
+    setSubmitting(false);
+    if (error) {
+      toast({ title: 'Registration failed', description: error, variant: 'destructive' });
+    } else {
       toast({ title: 'Account created!', description: 'Welcome to BloodLink.' });
       navigate('/dashboard');
-    } else {
-      toast({ title: 'Registration failed', description: 'Email already exists.', variant: 'destructive' });
     }
   };
 
@@ -76,26 +84,16 @@ export default function Register() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Role</Label>
-                <Select value={form.role} onValueChange={v => set('role', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="donor">Donor</SelectItem>
-                    <SelectItem value="requester">Requester</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
                 <Label>City / Area</Label>
                 <Input placeholder="Mumbai" value={form.location} onChange={e => set('location', e.target.value)} required />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label>Pincode</Label>
                 <Input placeholder="400001" value={form.pincode} onChange={e => set('pincode', e.target.value)} required />
               </div>
             </div>
-            <Button type="submit" className="w-full gap-2 mt-2">
-              <UserPlus className="h-4 w-4" /> Create Account
+            <Button type="submit" className="w-full gap-2 mt-2" disabled={submitting}>
+              <UserPlus className="h-4 w-4" /> {submitting ? 'Creating account…' : 'Create Account'}
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground mt-6">

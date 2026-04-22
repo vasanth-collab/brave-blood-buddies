@@ -1,5 +1,5 @@
 // =============================================
-// LOGIN PAGE - Simple email + password login form
+// LOGIN PAGE
 // =============================================
 
 import { useState } from 'react';
@@ -15,17 +15,21 @@ import { useToast } from '@/hooks/use-toast';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(email, password)) {
+    setSubmitting(true);
+    const { error } = await signIn(email, password);
+    setSubmitting(false);
+    if (error) {
+      toast({ title: 'Login failed', description: error, variant: 'destructive' });
+    } else {
       toast({ title: 'Welcome back!', description: 'Successfully logged in.' });
       navigate('/dashboard');
-    } else {
-      toast({ title: 'Login failed', description: 'Invalid email or password.', variant: 'destructive' });
     }
   };
 
@@ -51,16 +55,13 @@ export default function Login() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full gap-2">
-              <LogIn className="h-4 w-4" /> Sign In
+            <Button type="submit" className="w-full gap-2" disabled={submitting}>
+              <LogIn className="h-4 w-4" /> {submitting ? 'Signing in…' : 'Sign In'}
             </Button>
           </form>
           <p className="text-center text-sm text-muted-foreground mt-6">
             Don't have an account?{' '}
             <Link to="/register" className="text-primary font-medium hover:underline">Register</Link>
-          </p>
-          <p className="text-center text-xs text-muted-foreground mt-3">
-            Demo: use any seeded donor email with password <code className="bg-muted px-1 rounded">demo123</code>
           </p>
         </CardContent>
       </Card>
