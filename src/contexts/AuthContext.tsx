@@ -1,22 +1,13 @@
 // =============================================
-// AUTH CONTEXT - Handles login, register, logout
-// Uses localStorage to store user data (no backend needed)
+// AUTH CONTEXT — wraps Supabase auth (Lovable Cloud)
 // =============================================
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { User, DonorProfile, UserRole, BloodGroup } from '@/types';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { Session, User as SupaUser } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
+import type { Profile, DonorDetails, BloodGroup } from '@/types';
+import { approxCoordsForLocation } from '@/types';
 
-// What the auth system provides to all components
-interface AuthContextType {
-  user: User | DonorProfile | null;  // current logged-in user (or null)
-  isLoading: boolean;                // true while checking stored login
-  login: (email: string, password: string) => boolean;
-  register: (data: RegisterData) => boolean;
-  logout: () => void;
-  updateProfile: (updates: Partial<DonorProfile>) => void;
-}
-
-// Data needed to create a new account
 interface RegisterData {
   name: string;
   email: string;
@@ -25,92 +16,113 @@ interface RegisterData {
   bloodGroup: BloodGroup;
   location: string;
   pincode: string;
-  role: UserRole;
 }
 
-// Create the context (starts as undefined)
+interface AuthContextType {
+  session: Session | null;
+  authUser: SupaUser | null;
+  profile: Profile | null;
+  donorDetails: DonorDetails | null;
+  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (data: RegisterData) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Hook to use auth in any component: const { user, login } = useAuth();
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
 
-// Wraps the entire app to provide auth everywhere
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | DonorProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authUser, setAuthUser] = useState<SupaUser | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [donorDetails, setDonorDetails] = useState<DonorDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // On app load, check if user was previously logged in
+  // Fetch profile + donor details for the current user
+  const loadProfile = async (userId: string) => {
+    const [{ data: prof }, { data: det }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      supabase.from('donor_details').select('*').eq('user_id', userId).maybeSingle(),
+    ]);
+    setProfile(prof as Profile | null);
+    setDonorDetails(det as DonorDetails | null);
+  };
+
   useEffect(() => {
-    const stored = localStorage.getItem('bloodbank_user');
-    if (stored) setUser(JSON.parse(stored));
-    setIsLoading(false);
+    // 1. Subscribe to auth changes FIRST (best practice)
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setAuthUser(newSession?.user ?? null);
+      if (newSession?.user) {
+        // Defer to avoid deadlocks inside the callback
+        setTimeout(() => loadProfile(newSession.user.id), 0);
+      } else {
+        setProfile(null);
+        setDonorDetails(null);
+      }
+    });
+
+    // 2. Then check for existing session
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setAuthUser(s?.user ?? null);
+      if (s?.user) loadProfile(s.user.id).finally(() => setIsLoading(false));
+      else setIsLoading(false);
+    });
+
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Login: check email + password against stored users
-  const login = (email: string, password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem('bloodbank_users') || '{}');
-    const entry = users[email];
-    if (entry && entry.password === password) {
-      setUser(entry.user);
-      localStorage.setItem('bloodbank_user', JSON.stringify(entry.user));
-      return true;
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
+  };
+
+  const signUp = async (data: RegisterData) => {
+    const coords = approxCoordsForLocation(data.location, data.pincode);
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+        data: {
+          name: data.name,
+          phone: data.phone,
+          blood_group: data.bloodGroup,
+          location: data.location,
+          pincode: data.pincode,
+        },
+      },
+    });
+    if (error) return { error: error.message };
+
+    // After signup, the DB trigger creates profile/donor_details. Patch coords if known.
+    if (coords) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').update({ latitude: coords[0], longitude: coords[1] }).eq('id', user.id);
+      }
     }
-    return false;
+    return { error: null };
   };
 
-  // Register: create a new user and save to localStorage
-  const register = (data: RegisterData): boolean => {
-    const users = JSON.parse(localStorage.getItem('bloodbank_users') || '{}');
-    if (users[data.email]) return false; // email already taken
-
-    const now = new Date().toISOString();
-    const newUser: User | DonorProfile = data.role === 'donor'
-      ? {
-          id: crypto.randomUUID(), ...data,
-          role: 'donor' as const, isVerified: false, createdAt: now,
-          isAvailable: true, lastDonationDate: null, totalDonations: 0,
-          totalResponses: 0, totalRequests: 0, reliabilityScore: 25,
-          lastActiveDate: now,
-        }
-      : {
-          id: crypto.randomUUID(), ...data,
-          role: 'requester' as const, isVerified: false, createdAt: now,
-        };
-
-    users[data.email] = { user: newUser, password: data.password };
-    localStorage.setItem('bloodbank_users', JSON.stringify(users));
-    setUser(newUser);
-    localStorage.setItem('bloodbank_user', JSON.stringify(newUser));
-    return true;
+  const signOut = async () => {
+    await supabase.auth.signOut();
   };
 
-  // Logout: clear current user
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('bloodbank_user');
-  };
-
-  // Update profile: merge new data into existing user
-  const updateProfile = (updates: Partial<DonorProfile>) => {
-    if (!user) return;
-    const updated = { ...user, ...updates };
-    setUser(updated);
-    localStorage.setItem('bloodbank_user', JSON.stringify(updated));
-
-    // Also update in the users list
-    const users = JSON.parse(localStorage.getItem('bloodbank_users') || '{}');
-    if (users[user.email]) {
-      users[user.email].user = updated;
-      localStorage.setItem('bloodbank_users', JSON.stringify(users));
-    }
+  const refreshProfile = async () => {
+    if (authUser) await loadProfile(authUser.id);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ session, authUser, profile, donorDetails, isLoading, signIn, signUp, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
