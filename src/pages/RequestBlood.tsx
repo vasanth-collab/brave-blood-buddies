@@ -1,10 +1,11 @@
 // =============================================
-// REQUEST BLOOD - Form to create a new blood request
+// REQUEST BLOOD — creates request + triggers donor assignment
 // =============================================
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,10 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Droplets, Send, AlertTriangle, Zap, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { BLOOD_GROUPS, type BloodGroup, type UrgencyLevel } from '@/types';
-import { addRequest } from '@/lib/dataStore';
+import { BLOOD_GROUPS, type BloodGroup, type UrgencyLevel, approxCoordsForLocation } from '@/types';
 
-// Urgency options with icons and descriptions
 const urgencyOptions = [
   { value: 'normal' as UrgencyLevel, label: 'Normal', desc: 'No immediate danger', icon: Clock, color: 'text-success', border: 'border-success bg-success/10' },
   { value: 'urgent' as UrgencyLevel, label: 'Urgent', desc: 'Within 24 hours', icon: Zap, color: 'text-warning', border: 'border-warning bg-warning/10' },
@@ -24,46 +23,69 @@ const urgencyOptions = [
 ];
 
 export default function RequestBlood() {
-  const { user } = useAuth();
+  const { authUser, profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     bloodGroup: '' as BloodGroup,
-    location: user?.location || '',
-    pincode: user?.pincode || '',
+    location: profile?.location || '',
+    pincode: profile?.pincode || '',
     urgency: 'normal' as UrgencyLevel,
     unitsNeeded: '1',
     hospitalName: '',
-    contactPhone: user?.phone || '',
+    contactPhone: profile?.phone || '',
     notes: '',
   });
 
-  // Shortcut to update any form field
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!authUser || !profile) {
+      toast({ title: 'Please sign in', variant: 'destructive' });
+      return;
+    }
     if (!form.bloodGroup) {
       toast({ title: 'Error', description: 'Please select a blood group.', variant: 'destructive' });
       return;
     }
-    addRequest({
-      id: crypto.randomUUID(),
-      requesterId: user?.id || 'anonymous',
-      requesterName: user?.name || 'Anonymous',
-      bloodGroup: form.bloodGroup,
+    setSubmitting(true);
+    const coords = approxCoordsForLocation(form.location, form.pincode);
+
+    const { data: req, error } = await supabase.from('blood_requests').insert({
+      requester_id: authUser.id,
+      requester_name: profile.name || profile.email,
+      blood_group: form.bloodGroup,
       location: form.location,
       pincode: form.pincode,
+      latitude: coords?.[0] ?? null,
+      longitude: coords?.[1] ?? null,
       urgency: form.urgency,
-      unitsNeeded: parseInt(form.unitsNeeded) || 1,
-      hospitalName: form.hospitalName,
-      contactPhone: form.contactPhone,
+      units_needed: parseInt(form.unitsNeeded) || 1,
+      hospital_name: form.hospitalName,
+      contact_phone: form.contactPhone,
       notes: form.notes,
-      status: 'open',
-      createdAt: new Date().toISOString(),
+    }).select().single();
+
+    if (error || !req) {
+      setSubmitting(false);
+      toast({ title: 'Error', description: error?.message ?? 'Failed to create request', variant: 'destructive' });
+      return;
+    }
+
+    // Trigger smart matching (assigns Primary + Alternate, sends notifications)
+    const { error: assignErr } = await supabase.functions.invoke('assign-donors', {
+      body: { request_id: req.id },
     });
-    toast({ title: 'Request submitted!', description: 'Your blood request has been posted.' });
+    setSubmitting(false);
+
+    if (assignErr) {
+      toast({ title: 'Request submitted', description: 'No matching donors found yet — we\'ll keep searching.' });
+    } else {
+      toast({ title: 'Request submitted!', description: 'Primary and alternate donors have been notified.' });
+    }
     navigate('/dashboard');
   };
 
@@ -77,12 +99,10 @@ export default function RequestBlood() {
             </div>
           </div>
           <CardTitle className="text-2xl">Request Blood</CardTitle>
-          <CardDescription>Fill in the details to find matching donors</CardDescription>
+          <CardDescription>We'll auto-assign a Primary + Alternate donor and notify them</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* Urgency picker */}
             <div className="space-y-2">
               <Label>Urgency Level</Label>
               <div className="grid grid-cols-3 gap-3">
@@ -103,7 +123,6 @@ export default function RequestBlood() {
               </div>
             </div>
 
-            {/* Form fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Blood Group Needed</Label>
@@ -141,8 +160,8 @@ export default function RequestBlood() {
               <Textarea placeholder="Any additional information..." value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} />
             </div>
 
-            <Button type="submit" className="w-full gap-2" size="lg">
-              <Send className="h-4 w-4" /> Submit Request
+            <Button type="submit" className="w-full gap-2" size="lg" disabled={submitting}>
+              <Send className="h-4 w-4" /> {submitting ? 'Submitting…' : 'Submit Request'}
             </Button>
           </form>
         </CardContent>
