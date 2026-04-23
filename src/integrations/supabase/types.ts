@@ -110,6 +110,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "donor_assignments_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "donor_assignments_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
@@ -152,7 +159,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "donor_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {

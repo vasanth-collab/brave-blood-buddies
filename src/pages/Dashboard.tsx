@@ -46,7 +46,7 @@ export default function Dashboard() {
       supabase.from('donor_details').select('user_id, is_available'),
       supabase.from('blood_requests').select('*').eq('status', 'open').order('urgency', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('blood_requests').select('id, urgency, status'),
-      supabase.from('profiles').select('*, donor_details(*)').not('donor_details', 'is', null).limit(20),
+      supabase.from('profiles').select('*, donor_details!inner(*)').limit(20),
       authUser ? supabase.from('blood_requests')
         .select('*, donor_assignments(*, donor:profiles!donor_assignments_donor_id_fkey(id, name, phone, location))')
         .eq('requester_id', authUser.id)
@@ -69,6 +69,7 @@ export default function Dashboard() {
     setOpenRequests((openReqRes.data ?? []) as BloodRequest[]);
     setMyRequests((myReqRes.data ?? []) as RequestRow[]);
     const sortedDonors = ((topRes.data ?? []) as any[])
+      .map(p => ({ ...p, donor_details: Array.isArray(p.donor_details) ? p.donor_details[0] : p.donor_details }))
       .filter(p => p.donor_details)
       .sort((a, b) => (b.donor_details.reliability_score ?? 0) - (a.donor_details.reliability_score ?? 0))
       .slice(0, 5);
