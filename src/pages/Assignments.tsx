@@ -43,7 +43,7 @@ export default function Assignments() {
   useEffect(() => {
     if (!authUser) return;
     const ch = supabase
-      .channel(`assignments-${authUser.id}`)
+      .channel(`assignments-${authUser.id}-${Math.random().toString(36).slice(2)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'donor_assignments', filter: `donor_id=eq.${authUser.id}` }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
