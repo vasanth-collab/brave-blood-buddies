@@ -10,14 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Droplets, UserPlus } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Droplets, UserPlus, HeartHandshake, Hospital } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { BLOOD_GROUPS, type BloodGroup } from '@/types';
+
+type Role = 'donor' | 'requester';
 
 export default function Register() {
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '',
     bloodGroup: '' as BloodGroup, location: '', pincode: '',
+    role: 'donor' as Role,
   });
   const [submitting, setSubmitting] = useState(false);
   const { signUp } = useAuth();
@@ -57,6 +61,43 @@ export default function Register() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Role selection — Donor or Requester */}
+            <div className="space-y-2">
+              <Label>I want to join as</Label>
+              <RadioGroup
+                value={form.role}
+                onValueChange={(v) => set('role', v as Role)}
+                className="grid grid-cols-2 gap-3"
+              >
+                <label
+                  htmlFor="role-donor"
+                  className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
+                    form.role === 'donor' ? 'border-primary bg-accent' : 'border-border hover:bg-muted'
+                  }`}
+                >
+                  <RadioGroupItem id="role-donor" value="donor" />
+                  <HeartHandshake className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-medium text-sm">Donor</div>
+                    <div className="text-xs text-muted-foreground">Donate blood</div>
+                  </div>
+                </label>
+                <label
+                  htmlFor="role-requester"
+                  className={`flex items-center gap-3 rounded-lg border-2 p-3 cursor-pointer transition-colors ${
+                    form.role === 'requester' ? 'border-primary bg-accent' : 'border-border hover:bg-muted'
+                  }`}
+                >
+                  <RadioGroupItem id="role-requester" value="requester" />
+                  <Hospital className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="font-medium text-sm">Requester</div>
+                    <div className="text-xs text-muted-foreground">Request blood</div>
+                  </div>
+                </label>
+              </RadioGroup>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Full Name</Label>

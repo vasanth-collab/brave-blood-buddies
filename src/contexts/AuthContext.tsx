@@ -16,6 +16,7 @@ interface RegisterData {
   bloodGroup: BloodGroup;
   location: string;
   pincode: string;
+  role: 'donor' | 'requester';
 }
 
 interface AuthContextType {
@@ -98,6 +99,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           blood_group: data.bloodGroup,
           location: data.location,
           pincode: data.pincode,
+          role: data.role,
         },
       },
     });
