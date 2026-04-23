@@ -46,7 +46,7 @@ export default function Dashboard() {
       supabase.from('donor_details').select('user_id, is_available'),
       supabase.from('blood_requests').select('*').eq('status', 'open').order('urgency', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('blood_requests').select('id, urgency, status'),
-      supabase.from('profiles').select('*, donor_details(*)').not('donor_details', 'is', null).limit(20),
+      supabase.from('profiles').select('*, donor_details!inner(*)').limit(20),
       authUser ? supabase.from('blood_requests')
         .select('*, donor_assignments(*, donor:profiles!donor_assignments_donor_id_fkey(id, name, phone, location))')
         .eq('requester_id', authUser.id)
