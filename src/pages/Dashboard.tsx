@@ -69,6 +69,7 @@ export default function Dashboard() {
     setOpenRequests((openReqRes.data ?? []) as BloodRequest[]);
     setMyRequests((myReqRes.data ?? []) as RequestRow[]);
     const sortedDonors = ((topRes.data ?? []) as any[])
+      .map(p => ({ ...p, donor_details: Array.isArray(p.donor_details) ? p.donor_details[0] : p.donor_details }))
       .filter(p => p.donor_details)
       .sort((a, b) => (b.donor_details.reliability_score ?? 0) - (a.donor_details.reliability_score ?? 0))
       .slice(0, 5);
